@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1420">
+  <title>Driving Assistant · 实时驾驶舱</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m8 3-4 18M16 3l4 18M12 4v3m0 4v3m0 4v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><div><strong>Driving Assistant <span>实验驾驶舱</span></strong><small>感知状态 · 理解意图 · 协调执行</small></div></div>
+    <div class="top-right"><span id="connectionBadge" class="connection-badge connecting"><i class="signal-dot"></i><span id="connectionLabel">正在连接</span></span><span class="top-divider"></span><span id="modeTag" class="simulation-tag">CARLA SIM</span><button id="resetBtn" class="ghost-button"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4.2 7A6 6 0 1 1 4 13M4.2 3.5V7h3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>重置演示</button></div>
+  </header>
+
+  <main class="workspace">
+    <section class="simulation" aria-label="CARLA 实时仿真画面">
+      <div class="simulation-head"><div><span class="section-kicker">CARLA / LIVE WORLD</span><h1>把对话放进驾驶现场</h1></div><div class="camera-tools"><span id="mapName" class="map-tag">连接中</span><button id="cameraModeBtn" class="outline-button">切换车外视角</button></div></div>
+      <div id="carlaScene" class="camera-stage" hidden>
+        <img id="cameraFrame" alt="CARLA 仿真车辆摄像头画面">
+        <div id="cameraWaiting" class="camera-waiting"><span class="waiting-orbit" aria-hidden="true"></span><strong>等待仿真画面</strong><span>摄像头连接后将在这里显示道路</span></div>
+        <div class="camera-hud"><span id="cameraLabel">前视摄像头</span><span id="cameraBadge" class="camera-badge waiting"><i class="signal-dot"></i><span id="cameraStatus">等待画面</span></span></div>
+        <div id="cameraNotice" class="camera-notice" role="status" hidden></div>
+        <div id="liveAction" class="live-action" hidden role="status"></div>
+      </div>
+      <div id="memoryScene" class="memory-stage" hidden><span>DA / MEMORY DEMO</span><strong>本地逻辑演示</strong><p>当前使用内存状态；切换 CARLA 模式可接收实时仿真数据。</p></div>
+
+      <button id="telemetryOpen" class="telemetry-entry connecting" type="button" aria-haspopup="dialog" aria-controls="telemetryDialog"><span class="stream-entry-heading"><span>CARLA <i aria-hidden="true">→</i> DA 持续输入</span><span id="streamStatus" class="stream-status"><i class="signal-dot"></i>等待连接</span></span><span class="stream-entry-metrics"><span id="streamCount">累计采样 —</span><span id="streamRate">— Hz</span><span id="streamFrame">F—</span><span id="streamAge">时间未知</span><span class="stream-entry-arrow" aria-hidden="true">↗</span></span></button>
+
+      <div class="simulation-overlay">
+        <section class="status-block live-telemetry">
+          <div class="overlay-heading"><span class="panel-dot" aria-hidden="true"></span><strong>车辆实时状态</strong><span id="motionState" class="motion-tag">等待数据</span></div>
+          <div class="driving-summary"><div class="speed-metric"><span id="speed">—</span><em>km/h</em><small>当前车速</small></div><div class="summary-metrics"><div><span id="noaLabel">TM 自动驾驶</span><strong id="noaStatus">—</strong></div><div><span>道路限速</span><strong><span id="speedLimit">—</span><em>km/h</em></strong></div><div><span>实测前车间距</span><strong id="frontGap">—</strong></div></div></div>
+          <div class="driving-context"><span id="trafficLight" class="light-label unknown"><i></i><span>信号灯未知</span></span><span id="laneInfo">道路 / 车道 —</span></div>
+          <div class="setting-line"><span>TM 跟车设置</span><strong><span id="distance">—</span><em id="distanceUnit">级</em></strong><small id="speedTargetLabel">目标车速 按限速</small></div>
+          <div id="dataMeta" class="data-meta"><span id="frameInfo">FRAME —</span><span id="dataAge">等待采集</span></div>
+          <details class="telemetry-details"><summary>采集明细 <span>⌄</span></summary><div class="detail-grid"><span>位置坐标</span><strong id="positionInfo">—</strong><span>GNSS 定位</span><strong id="gnssInfo">—</strong><span>前车车速</span><strong id="frontSpeed">—</strong><span>附近车辆</span><strong id="nearbyCount">—</strong><span>最近障碍（激光雷达）</span><strong id="obstacleInfo">—</strong><span>雷达目标</span><strong id="radarInfo">—</strong><span>附近行人</span><strong id="pedestrianInfo">—</strong><span>天气</span><strong id="weatherInfo">—</strong><span>油门 / 制动</span><strong id="controlInfo">—</strong><span>录制 / 注入场景</span><strong id="recorderInfo">—</strong><span>仿真模式</span><strong id="syncInfo">—</strong><span>采集状态</span><strong id="telemetryDetail">—</strong></div></details>
+          <div class="status-controls"><button id="toggleNoa" class="outline-button" data-live-control>操作台：暂停 TM</button><button id="clearEvent" class="outline-button">清除告警</button></div>
+        </section>
+        <section class="status-block compact-route">
+          <div class="overlay-heading"><span>NAVIGATION</span><strong>路径记录</strong><small id="routeCount">—</small></div><div id="routes" class="routes"></div>
+        </section>
+        <section class="status-block compact-alert">
+          <div class="overlay-heading"><span>EVENT FEED</span><strong>最近事件</strong><small id="eventSource">等待数据</small></div><div id="alertContent" class="alert-idle"><span>—</span><div><strong>等待事件数据</strong><small>事件来源将随记录显示</small></div></div>
+        </section>
+      </div>
+      <p id="disclaimer" class="simulation-caption">CARLA 仿真数据 · 仿真车辆与真实道路车辆不同</p>
+    </section>
+
+    <aside class="interaction" aria-label="驾驶助手交互区">
+      <section class="side-section scenario-panel">
+        <div class="section-heading"><div><span class="section-kicker">01 / ASK THE DRIVE</span><h2>跟着实时车况聊</h2></div><span class="small-mark">DA</span></div>
+        <div class="scenario-grid"><button class="scenario" data-utterance="停车" data-live-control><span class="scenario-symbol" aria-hidden="true">■</span><span class="scenario-copy"><strong>停车</strong><small>暂停 TM 自动驾驶并制动</small></span><span class="scenario-action">执行 ↗</span></button><button class="scenario" data-utterance="开车" data-live-control><span class="scenario-symbol distance-symbol" aria-hidden="true">▶</span><span class="scenario-copy"><strong>开车</strong><small>恢复 TM 自动驾驶继续行驶</small></span><span class="scenario-action">执行 ↗</span></button></div>
+        <div class="quick-prompts"><button data-utterance="我现在开多快">当前车速</button><button data-utterance="当前道路和车道">道路和车道</button><button data-utterance="附近有行人吗">附近行人</button><button data-utterance="最近障碍物多远">最近障碍</button><button data-utterance="跟车距离调远一点" data-live-control>跟车调远</button><button data-utterance="最近发生了什么">最近事件</button></div>
+        <details class="secondary-demos driving-demos"><summary>驾驶指令（由 TM 执行并留痕） <span>展开 ↘</span></summary>
+          <div class="prompt-group"><span>车速</span><div class="quick-prompts"><button data-utterance="开到20" data-live-control>开到 20</button><button data-utterance="开到40" data-live-control>开到 40</button><button data-utterance="开慢点" data-live-control>慢一点</button><button data-utterance="加速" data-live-control>快一点</button><button data-utterance="恢复限速" data-live-control>恢复限速</button></div></div>
+          <div class="prompt-group"><span>变道</span><div class="quick-prompts"><button data-utterance="向左变道" data-live-control>向左变道</button><button data-utterance="向右变道" data-live-control>向右变道</button></div></div>
+          <div class="prompt-group"><span>路线与目的地</span><div class="quick-prompts"><button data-utterance="换一条更快的路" data-live-control>更快路线</button><button data-utterance="走备选路线" data-live-control>走备选路线</button><button data-utterance="回到原始路线" data-live-control>回到原始路线</button><button data-utterance="去东区" data-live-control>去东区</button><button data-utterance="去南区" data-live-control>去南区</button><button data-utterance="去西区" data-live-control>去西区</button><button data-utterance="去北区" data-live-control>去北区</button><button data-utterance="换个目的地" data-live-control>换个目的地</button></div></div>
+          <div class="prompt-group"><span>驾驶状态</span><div class="quick-prompts"><button data-utterance="暂停自动驾驶" data-live-control>暂停自动驾驶</button><button data-utterance="恢复自动驾驶" data-live-control>恢复自动驾驶</button><button data-utterance="紧急停车">紧急停车</button></div></div>
+          <div class="prompt-group"><span>直接控制（仅 TM 暂停后开放）</span><div class="quick-prompts"><button data-utterance="踩油门" data-live-control>踩油门</button><button data-utterance="松油门" data-live-control>松油门</button><button data-utterance="刹车" data-live-control>刹车</button><button data-utterance="左打方向" data-live-control>左打方向</button><button data-utterance="右打方向" data-live-control>右打方向</button><button data-utterance="回正方向" data-live-control>回正方向</button></div></div>
+          <p class="capability-note">指令直接作用于仿真车辆，遵守交通规则与限速；直接控制在 TM 驾驶中会被分层权限拒绝，先“暂停自动驾驶”再用。</p>
+        </details>
+        <details class="secondary-demos environment-demos"><summary>演示工具（非驾驶指令） <span>展开 ↘</span></summary>
+          <div class="prompt-group"><span>环境天气</span><div class="quick-prompts"><button data-utterance="下雨" data-live-control>下雨</button><button data-utterance="起雾" data-live-control>起雾</button><button data-utterance="天黑" data-live-control>天黑</button><button data-utterance="晴天" data-live-control>晴天</button></div></div>
+          <div class="prompt-group"><span>场景注入</span><div class="quick-prompts"><button data-utterance="模拟红灯场景" data-live-control>注入红灯</button><button data-utterance="前面放一辆事故车" data-live-control>注入事故车</button><button data-utterance="模拟行人横穿马路" data-live-control>行人横穿</button><button data-utterance="清除场景" data-live-control>清除场景</button></div></div>
+          <div class="prompt-group"><span>行程录制</span><div class="quick-prompts"><button data-utterance="开始录制" data-live-control>开始录制</button><button data-utterance="停止录制" data-live-control>停止录制</button></div></div>
+          <div class="prompt-group"><span>感知查询（只读）</span><div class="quick-prompts"><button data-utterance="现在天气怎么样">天气</button><button data-utterance="红灯还有多久变绿">信号灯相位</button><button data-utterance="我们现在在哪">GNSS 定位</button></div></div>
+          <div class="prompt-group"><span>边界演示（拒止与追问）</span><div class="quick-prompts"><button data-utterance="帮我变道">变道不指方向</button><button data-utterance="开到150">超速请求</button><button data-utterance="帮我超车">超车</button><button data-utterance="调一下那个">模糊指令</button></div></div>
+          <div class="edge-cases"><button class="scenario boundary" id="eventScenario"><span class="scenario-copy"><strong>注入模拟接管告警</strong><small>人工事件，演示告警优先级</small></span><span class="scenario-action">注入 ↗</span></button><button id="syncModeBtn" class="outline-button" data-live-control>切换同步模式</button></div>
+          <p class="capability-note">天气与场景改变的是仿真环境，不是车辆控制；同步模式为控制台级开关（20 Hz 定步长仿真）。</p>
+        </details>
+      </section>
+
+      <section class="side-section conversation-panel">
+        <div class="section-heading"><div><span class="section-kicker">02 / CONVERSATION</span><h2>交互记录</h2></div><span id="turnCount" class="counter">0 轮</span></div>
+        <div id="connectionNotice" class="connection-notice" role="status" hidden></div>
+        <div id="messages" class="messages" role="log" aria-live="polite"><div class="empty-state"><span class="empty-icon" aria-hidden="true">✦</span><strong>从一个驾驶问题开始</strong><p>你的原话、DA 的判断和数据依据都会留在这里。</p></div></div>
+        <form id="commandForm" class="composer"><label class="sr-only" for="utterance">输入驾驶话术</label><input id="utterance" type="text" maxlength="300" autocomplete="off" placeholder="问问 DA：为什么停了？" required><button type="submit" aria-label="发送指令">发送 <span aria-hidden="true">↗</span></button></form><div id="composerHint" class="composer-hint"><i class="signal-dot"></i><span>回答会引用当前采集状态</span><kbd>Enter</kbd></div>
+      </section>
+
+      <section class="side-section trace-panel">
+        <div class="section-heading"><div><span class="section-kicker">03 / DECISION TRACE</span><h2>最近一次判断</h2></div><span id="resultBadge" class="result-badge neutral">等待指令</span></div><div id="trace" class="trace-empty">本轮使用了什么状态，发出了什么请求，都在这里。</div>
+      </section>
+    </aside>
+  </main>
+  <dialog id="telemetryDialog" class="telemetry-dialog" aria-labelledby="telemetryTitle" aria-describedby="telemetryDescription">
+    <div class="stream-dialog-head"><div><span class="section-kicker">CARLA → DA / INPUT STREAM</span><h2 id="telemetryTitle">持续采集的真实仿真输入</h2></div><button id="telemetryClose" class="ghost-button" type="button" aria-label="关闭实时数据面板" autofocus>关闭 <span aria-hidden="true">×</span></button></div>
+    <p id="telemetryDescription" class="stream-description">连续采样由服务端进行，页面关闭仍读取；缓存最近 300 条，重置场景后清空。</p>
+    <div class="stream-dialog-stats"><div><span>本场景累计采样</span><strong id="dialogSamples">—</strong></div><div><span>实际采样频率</span><strong id="dialogRate">—</strong></div><div><span>当前缓存 / 容量</span><strong id="dialogBuffer">— / 300</strong></div><div><span>最新仿真帧</span><strong id="dialogFrame">—</strong></div></div>
+    <div id="streamNotice" class="stream-notice" role="status">等待数据流接口返回实际采样。</div>
+    <div class="stream-dialog-body"><div class="stream-table-heading"><strong id="streamRowsLabel">最近实际采样</strong><span>最新记录在上 · 缺失值显示 —</span></div><div class="stream-table-wrap" tabindex="0" role="region" aria-label="最近实际 CARLA 采样表"><table class="stream-table"><thead><tr><th scope="col">仿真帧</th><th scope="col">仿真时间 / s</th><th scope="col">车速 / km/h</th><th scope="col">道路 / 车道</th><th scope="col">信号灯</th><th scope="col">前车间距 / m</th></tr></thead><tbody id="streamRows"><tr><td colspan="6">等待实际采样</td></tr></tbody></table></div><details id="streamRawDetails" class="stream-raw-details"><summary>最新原始输入 JSON <span>展开查看 ↘</span></summary><pre id="streamRaw">尚未收到实际输入</pre></details></div>
+    <div class="stream-dialog-footer"><span id="streamBufferNote">导出内容仅为当前最近缓存，最多 300 条。</span><a id="telemetryExport" class="outline-button" download="carla-recent-samples.jsonl" aria-disabled="true">导出最近缓存 JSONL ↗</a></div>
+  </dialog>
+  <script src="/app.js" defer></script>
+</body>
+</html>
+
