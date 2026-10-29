@@ -1,11 +1,14 @@
-param([switch]$NoBrowser)
+param(
+    [switch]$NoBrowser,
+    [string]$InstallDir = 'D:\CARLA_MVP\CARLA_0.9.16'
+)
 $ErrorActionPreference = 'Stop'
 $projectDir = Split-Path -Parent $PSScriptRoot
 $pythonExe = Join-Path $projectDir '.venv\Scripts\python.exe'
 if (-not (Test-Path -LiteralPath $pythonExe)) {
     throw 'Missing .venv Python. Install requirements-carla.txt first.'
 }
-& (Join-Path $PSScriptRoot 'start_carla_low.ps1')
+& (Join-Path $PSScriptRoot 'start_carla_low.ps1') -InstallDir $InstallDir
 $deadline = (Get-Date).AddSeconds(90)
 do {
     $ready = Get-NetTCPConnection -LocalPort 2000 -State Listen -ErrorAction SilentlyContinue

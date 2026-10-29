@@ -12,6 +12,39 @@
 - 安全边界:超速/超车/闯红灯/逆行拒止,紧急告警抢占一切写操作(唯一例外是紧急停车),数据过期不执行;
 - 可审计可集成:每轮交互保留原话/意图/依据帧/回执/前后状态,`/api/agent-input` 输出带版本号的标准输入。
 
+## 环境安装(从零部署)
+
+按顺序执行一次即可。前置条件:Windows 10/11、[Python 3.12](https://www.python.org/downloads/)、约 15 GB 空闲磁盘(CARLA 约 7.8 GB + 虚拟环境)。显卡:CARLA 官方建议独显 8 GB 显存;核显(如 Radeon 780M)在低画质模式下可运行本项目。
+
+**1. 获取代码**
+
+```powershell
+git clone https://github.com/Xiaofango/driving-assistant-mvp.git DA
+cd DA
+```
+
+**2. 安装 CARLA 0.9.16(服务端)**
+
+从 [CARLA 0.9.16 Windows 版](https://github.com/carla-simulator/carla/releases/tag/0.9.16)下载 `CARLA_0.9.16.zip`,解压到任意目录,默认脚本期望的路径是 `D:\CARLA_MVP\CARLA_0.9.16`(其他路径见第 4 步的参数)。若启动报缺 DLL,安装[DirectX End-User Runtime](https://www.microsoft.com/en-us/download/details.aspx?id=35)。
+
+**3. 创建 Python 虚拟环境并安装依赖**
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+**4. 验证安装**
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests    # 95 项测试应全部通过
+.\scripts\start_demo.ps1                                    # 一键启动,浏览器自动打开演示页
+```
+
+CARLA 安装在非默认路径时:`.\scripts\start_demo.ps1 -InstallDir <你的CARLA目录>`(分步启动则给 `start_carla_low.ps1` 传同样的参数)。连接远程 CARLA 服务端(如另一台有独显的机器):`.\.venv\Scripts\python.exe -m da_mvp.web_demo --mode carla --carla-host <地址>`。
+
+安装部署遇到问题(端口占用、世界冻结、画面不出、车辆不动)见 [docs/11_运维与故障排查.md](docs/11_运维与故障排查.md)。
+
 ## 快速开始
 
 ### 方式一:一键启动(CARLA 实时模式,推荐)
